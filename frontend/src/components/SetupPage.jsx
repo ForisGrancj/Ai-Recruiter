@@ -2,10 +2,24 @@ import React, { useState } from 'react';
 import { UploadCloud, FileText, CheckCircle2, Sparkles, User, Briefcase, Plus, X, ArrowRight, Key, Eye, EyeOff, Lock } from 'lucide-react';
 import { uploadCandidateCV, createJob, startInterviewSession } from '../services/api';
 
+const COUNTRY_CODES = [
+  { code: '+90', label: '🇹🇷 +90', placeholder: '(5XX) XXX-XXXX' },
+  { code: '+1', label: '🇺🇸 +1', placeholder: '(555) 000-0000' },
+  { code: '+44', label: '🇬🇧 +44', placeholder: '7123 456789' },
+  { code: '+49', label: '🇩🇪 +49', placeholder: '151 12345678' },
+  { code: '+33', label: '🇫🇷 +33', placeholder: '6 12 34 56 78' },
+  { code: '+31', label: '🇳🇱 +31', placeholder: '6 12345678' },
+  { code: '+971', label: '🇦🇪 +971', placeholder: '50 123 4567' },
+  { code: '+966', label: '🇸🇦 +966', placeholder: '50 123 4567' },
+  { code: '+994', label: '🇦🇿 +994', placeholder: '50 123 45 67' }
+];
+
+
 export default function SetupPage({ onInterviewStarted }) {
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
+  const [countryCode, setCountryCode] = useState('+90');
   const [phone, setPhone] = useState('');
   const [cvFile, setCvFile] = useState(null);
 
@@ -24,6 +38,28 @@ export default function SetupPage({ onInterviewStarted }) {
 
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
+
+  const formatPhoneNumber = (value, code) => {
+    const digits = value.replace(/\D/g, '');
+    if (code === '+90' || code === '+1') {
+      if (digits.length <= 3) return digits ? `(${digits}` : '';
+      if (digits.length <= 6) return `(${digits.slice(0, 3)}) ${digits.slice(3)}`;
+      return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6, 10)}`;
+    }
+    if (digits.length <= 3) return digits;
+    if (digits.length <= 6) return `${digits.slice(0, 3)} ${digits.slice(3)}`;
+    return `${digits.slice(0, 3)} ${digits.slice(3, 6)} ${digits.slice(6, 10)}`;
+  };
+
+  const handlePhoneChange = (e) => {
+    const formatted = formatPhoneNumber(e.target.value, countryCode);
+    setPhone(formatted);
+  };
+
+  const validateEmailFormat = (emailStr) => {
+    const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+    return emailRegex.test(emailStr.trim());
+  };
 
   const handleAddSkill = (e) => {
     e.preventDefault();
@@ -49,6 +85,18 @@ export default function SetupPage({ onInterviewStarted }) {
       setErrorMsg('Please fill in the first name, last name, and email fields.');
       return;
     }
+
+    if (!validateEmailFormat(email)) {
+      setErrorMsg('Please enter a valid email address with a domain extension (e.g. john@gmail.com, name@company.org).');
+      return;
+    }
+
+    const cleanPhoneDigits = phone.replace(/\D/g, '');
+    if (phone.trim() && cleanPhoneDigits.length < 7) {
+      setErrorMsg('Please enter a valid phone number with at least 7 digits.');
+      return;
+    }
+
     if (!jobTitle) {
       setErrorMsg('Please specify the target position title.');
       return;
@@ -59,11 +107,13 @@ export default function SetupPage({ onInterviewStarted }) {
     try {
       localStorage.setItem('gemini_api_key', apiKey.trim());
 
+      const fullPhoneNumber = phone.trim() ? `${countryCode} ${phone.trim()}` : '';
+
       const formData = new FormData();
       formData.append('first_name', firstName);
       formData.append('last_name', lastName);
-      formData.append('email', email);
-      formData.append('phone', phone);
+      formData.append('email', email.trim());
+      formData.append('phone', fullPhoneNumber);
       formData.append('desired_roles', `${jobTitle} (${skills.join(', ')})`);
       if (cvFile) {
         formData.append('cv_file', cvFile);
@@ -97,6 +147,7 @@ export default function SetupPage({ onInterviewStarted }) {
       setLoading(false);
     }
   };
+
 
   return (
     <div className="flex-1 overflow-y-auto bg-[var(--bg-main)] p-6 lg:p-10 text-[var(--text-primary)] flex flex-col justify-between transition-colors duration-200">
@@ -207,8 +258,8 @@ export default function SetupPage({ onInterviewStarted }) {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
-              <div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 min-w-0">
+              <div className="min-w-0">
                 <label className="block text-[11px] font-medium uppercase tracking-wider text-[var(--text-muted)] mb-1.5">
                   Email *
                 </label>
@@ -221,19 +272,37 @@ export default function SetupPage({ onInterviewStarted }) {
                   className="w-full bg-[var(--input-bg)] border border-[var(--border-color)] rounded-lg px-3.5 py-2 text-xs text-[var(--text-primary)] placeholder-[var(--text-muted)] focus:outline-none focus:border-[var(--border-hover)]"
                 />
               </div>
-              <div>
+              <div className="min-w-0">
                 <label className="block text-[11px] font-medium uppercase tracking-wider text-[var(--text-muted)] mb-1.5">
-                  Phone
+                  Phone Number
                 </label>
-                <input
-                  type="tel"
-                  placeholder="+1 (555) 000-0000"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  className="w-full bg-[var(--input-bg)] border border-[var(--border-color)] rounded-lg px-3.5 py-2 text-xs text-[var(--text-primary)] placeholder-[var(--text-muted)] focus:outline-none focus:border-[var(--border-hover)]"
-                />
+                <div className="flex gap-1.5 min-w-0">
+                  <select
+                    value={countryCode}
+                    onChange={(e) => {
+                      setCountryCode(e.target.value);
+                      setPhone(formatPhoneNumber(phone, e.target.value));
+                    }}
+                    className="w-[92px] shrink-0 bg-[var(--input-bg)] border border-[var(--border-color)] rounded-lg px-2 py-2 text-xs text-[var(--text-primary)] focus:outline-none focus:border-[var(--border-hover)] font-mono cursor-pointer"
+                  >
+                    {COUNTRY_CODES.map((c) => (
+                      <option key={c.code} value={c.code} className="bg-[var(--bg-card)] text-[var(--text-primary)]">
+                        {c.label}
+                      </option>
+                    ))}
+                  </select>
+                  <input
+                    type="tel"
+                    placeholder={COUNTRY_CODES.find((c) => c.code === countryCode)?.placeholder || 'Phone number'}
+                    value={phone}
+                    onChange={handlePhoneChange}
+                    className="flex-1 min-w-0 bg-[var(--input-bg)] border border-[var(--border-color)] rounded-lg px-3.5 py-2 text-xs font-mono text-[var(--text-primary)] placeholder-[var(--text-muted)] focus:outline-none focus:border-[var(--border-hover)]"
+                  />
+                </div>
               </div>
             </div>
+
+
 
             <div>
               <label className="block text-[11px] font-medium uppercase tracking-wider text-[var(--text-muted)] mb-1.5">

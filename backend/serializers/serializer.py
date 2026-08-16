@@ -10,10 +10,21 @@ class CandidateProfileSerializer(serializers.ModelSerializer):
         fields = ['id', 'first_name', 'last_name', 'email', 'phone', 'desired_roles', 'cv_file', 'is_indexed']
         read_only_fields = ['id', 'is_indexed']
 
+    def validate_email(self, value):
+        if not value:
+            raise serializers.ValidationError("Email is required.")
+        email_str = value.strip().lower()
+        import re
+        email_regex = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+        if not re.match(email_regex, email_str):
+            raise serializers.ValidationError("Please provide a valid email address with a domain extension (e.g. john@gmail.com, name@company.org).")
+        return email_str
+
     def validate_cv_file(self, value):
         if value and not value.name.endswith(('.pdf', '.docx')):
             raise serializers.ValidationError('cv file must be pdf or docx')
         return value
+
 
 class InterviewQuestionSerializer(serializers.ModelSerializer):
     class Meta:

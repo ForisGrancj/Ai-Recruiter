@@ -21,14 +21,25 @@ export default function ChatInterviewPage({ sessionData, sessionMeta, onNewInter
   const [isTimerActive, setIsTimerActive] = useState(!isSessionCompleted);
 
   const chatEndRef = useRef(null);
+  const inputRef = useRef(null);
 
   const scrollToBottom = () => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
+  const focusInput = () => {
+    setTimeout(() => {
+      inputRef.current?.focus();
+    }, 50);
+  };
+
   useEffect(() => {
     scrollToBottom();
-  }, [messages, loading]);
+    if (!loading && !isSessionCompleted && !isEvaluating) {
+      focusInput();
+    }
+  }, [messages, loading, isSessionCompleted, isEvaluating]);
+
 
   useEffect(() => {
     if (sessionData && sessionData.questions && sessionData.questions.length > 0) {
@@ -293,6 +304,8 @@ export default function ChatInterviewPage({ sessionData, sessionMeta, onNewInter
           <form onSubmit={handleSendAnswer} className="max-w-3xl mx-auto flex gap-2.5 items-end">
             <div className="flex-1 bg-[var(--input-bg)] border border-[var(--border-color)] focus-within:border-[var(--border-hover)] rounded-xl p-3 flex flex-col gap-2 shadow-sm">
               <textarea
+                ref={inputRef}
+                autoFocus
                 rows="2"
                 value={currentAnswer}
                 onChange={(e) => setCurrentAnswer(e.target.value)}
@@ -306,6 +319,7 @@ export default function ChatInterviewPage({ sessionData, sessionMeta, onNewInter
                 disabled={loading || isEvaluating}
                 className="w-full bg-transparent text-xs lg:text-sm text-[var(--text-primary)] placeholder-[var(--text-muted)] outline-none resize-none"
               />
+
               <div className="flex items-center justify-between text-[11px] text-[var(--text-muted)] pt-1 border-t border-[var(--border-color)]">
                 <span>💡 Tip: Your response relevance to the position and CV context will be evaluated automatically.</span>
                 <span>Enter ↵</span>
