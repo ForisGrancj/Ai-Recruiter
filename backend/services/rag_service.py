@@ -5,7 +5,7 @@ from backend.models.interviewsession import InterviewSession
 from backend.models.interviewquestion import InterviewQuestion
 
 
-def generate_initial_question_from_cv(candidate_id: int, job_title: str) -> str:
+def generate_initial_question_from_cv(candidate_id: int, job_title: str, api_key: str = None) -> str:
     candidate = CandidateProfile.objects.filter(id=candidate_id).first()
     desired_roles = candidate.desired_roles if candidate else ""
     candidate_name = candidate.first_name if candidate else "Candidate"
@@ -13,7 +13,8 @@ def generate_initial_question_from_cv(candidate_id: int, job_title: str) -> str:
     cv_summary = search_cv_context(
         candidate_id=candidate_id,
         query_text="experience, projects, achievements, technologies, skills, education",
-        top_k=4
+        top_k=4,
+        api_key=api_key
     )
 
     prompt = f"""
@@ -33,7 +34,7 @@ def generate_initial_question_from_cv(candidate_id: int, job_title: str) -> str:
     - Return ONLY the question sentence without any greetings prefix or Markdown formatting.
     """
 
-    question = ask_llm(prompt)
+    question = ask_llm(prompt, api_key=api_key)
 
     if not question or not question.strip():
         question = f"Welcome! Could you briefly share your key technical background and how your experience aligns with the {job_title} position?"
@@ -41,7 +42,7 @@ def generate_initial_question_from_cv(candidate_id: int, job_title: str) -> str:
     return question.strip()
 
 
-def generate_followup_question(session_id: int, candidate_answer: str) -> str:
+def generate_followup_question(session_id: int, candidate_answer: str, api_key: str = None) -> str:
     session = InterviewSession.objects.filter(id=session_id).first()
     if not session:
         return "Thank you. Could you provide a bit more detail about your background relevant to this role?"
@@ -59,7 +60,8 @@ def generate_followup_question(session_id: int, candidate_answer: str) -> str:
     relevant_cv_context = search_cv_context(
         candidate_id=candidate.id,
         query_text=f"{candidate_answer} {job_posting.title} {candidate.desired_roles or ''}",
-        top_k=3
+        top_k=3,
+        api_key=api_key
     )
 
     prompt = f"""
@@ -104,7 +106,7 @@ def generate_followup_question(session_id: int, candidate_answer: str) -> str:
        - Return ONLY the response text without Markdown formatting.
     """
 
-    res = ask_llm(prompt)
+    res = ask_llm(prompt, api_key=api_key)
 
     if not res or not res.strip():
         ans_lower = (candidate_answer or '').strip().lower()

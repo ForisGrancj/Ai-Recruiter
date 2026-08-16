@@ -7,7 +7,7 @@ from backend.services.vector_db import search_cv_context
 from backend.services.ai_service import ask_llm
 
 
-def evaluate_interview_session_service(session_id: int) -> InterviewSession:
+def evaluate_interview_session_service(session_id: int, api_key: str = None) -> InterviewSession:
     session = get_object_or_404(InterviewSession, id=session_id)
     questions = InterviewQuestion.objects.filter(session=session).order_by('id')
 
@@ -19,7 +19,8 @@ def evaluate_interview_session_service(session_id: int) -> InterviewSession:
     cv_summary = search_cv_context(
         candidate_id=session.candidate_id,
         query_text=session.job_posting.title,
-        top_k=3
+        top_k=3,
+        api_key=api_key
     )
 
     prompt = f"""
@@ -49,7 +50,7 @@ def evaluate_interview_session_service(session_id: int) -> InterviewSession:
     Return ONLY the raw JSON object without any Markdown fenced code blocks or extra text.
     """
 
-    raw_response = ask_llm(prompt)
+    raw_response = ask_llm(prompt, api_key=api_key)
 
     cleaned_json = raw_response.strip()
     if cleaned_json.startswith("```"):
@@ -93,4 +94,5 @@ HIRING MANAGER RECOMMENDATION:
         session.save()
 
     return session
+
 

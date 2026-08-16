@@ -6,7 +6,7 @@ from backend.services.rag_service import (
     generate_followup_question
 )
 
-def create_interview_session_service(candidate_id: int, job_posting_id: int) -> InterviewSession:
+def create_interview_session_service(candidate_id: int, job_posting_id: int, api_key: str = None) -> InterviewSession:
     session = InterviewSession.objects.create(
         candidate_id=candidate_id,
         job_posting_id=job_posting_id,
@@ -15,7 +15,8 @@ def create_interview_session_service(candidate_id: int, job_posting_id: int) -> 
 
     first_question_text = generate_initial_question_from_cv(
         candidate_id=candidate_id,
-        job_title=session.job_posting.title
+        job_title=session.job_posting.title,
+        api_key=api_key
     )
 
     InterviewQuestion.objects.create(
@@ -26,7 +27,7 @@ def create_interview_session_service(candidate_id: int, job_posting_id: int) -> 
 
     return session
 
-def process_candidate_answer_service(session_id: int, user_answer: str) -> InterviewQuestion:
+def process_candidate_answer_service(session_id: int, user_answer: str, api_key: str = None) -> InterviewQuestion:
     session = get_object_or_404(InterviewSession, id=session_id)
 
     last_question = InterviewQuestion.objects.filter(session=session).last()
@@ -36,7 +37,8 @@ def process_candidate_answer_service(session_id: int, user_answer: str) -> Inter
 
     new_question_text = generate_followup_question(
         session_id=session.id,
-        candidate_answer=user_answer
+        candidate_answer=user_answer,
+        api_key=api_key
     )
 
     new_question = InterviewQuestion.objects.create(
@@ -46,4 +48,5 @@ def process_candidate_answer_service(session_id: int, user_answer: str) -> Inter
     )
 
     return new_question
+
 

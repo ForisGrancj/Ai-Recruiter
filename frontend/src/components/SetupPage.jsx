@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { UploadCloud, FileText, CheckCircle2, Sparkles, User, Briefcase, Plus, X, ArrowRight } from 'lucide-react';
+import { UploadCloud, FileText, CheckCircle2, Sparkles, User, Briefcase, Plus, X, ArrowRight, Key, Eye, EyeOff, Lock } from 'lucide-react';
 import { uploadCandidateCV, createJob, startInterviewSession } from '../services/api';
 
 export default function SetupPage({ onInterviewStarted }) {
@@ -8,6 +8,9 @@ export default function SetupPage({ onInterviewStarted }) {
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [cvFile, setCvFile] = useState(null);
+
+  const [apiKey, setApiKey] = useState(() => localStorage.getItem('gemini_api_key') || '');
+  const [showApiKey, setShowApiKey] = useState(false);
 
   const [skills, setSkills] = useState(['Python', 'React', 'AI / LLM']);
   const [skillInput, setSkillInput] = useState('');
@@ -38,6 +41,10 @@ export default function SetupPage({ onInterviewStarted }) {
     e.preventDefault();
     setErrorMsg('');
 
+    if (!apiKey.trim()) {
+      setErrorMsg('Please enter your Gemini API Key to launch the interview.');
+      return;
+    }
     if (!firstName || !lastName || !email) {
       setErrorMsg('Please fill in the first name, last name, and email fields.');
       return;
@@ -50,6 +57,8 @@ export default function SetupPage({ onInterviewStarted }) {
     setLoading(true);
 
     try {
+      localStorage.setItem('gemini_api_key', apiKey.trim());
+
       const formData = new FormData();
       formData.append('first_name', firstName);
       formData.append('last_name', lastName);
@@ -102,7 +111,7 @@ export default function SetupPage({ onInterviewStarted }) {
             Demo Interview & CV Setup
           </h2>
           <p className="text-[var(--text-secondary)] text-sm max-w-2xl">
-            Upload your CV below, define your key skills, and select your target position to launch your live AI interview.
+            Upload your CV below, enter your API key, define your key skills, and select your target position to launch your live AI interview.
           </p>
         </div>
 
@@ -115,7 +124,48 @@ export default function SetupPage({ onInterviewStarted }) {
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <form onSubmit={handleSubmit} className="space-y-6">
+
+          {/* API Key Configuration Card */}
+          <div className="bg-[var(--bg-card)] border border-[var(--border-color)] rounded-xl p-5 space-y-3 shadow-sm">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-lg bg-[var(--bg-card-subtle)] border border-[var(--border-color)] flex items-center justify-center text-amber-400">
+                  <Key className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-sm text-[var(--text-primary)] flex items-center gap-2">
+                    Gemini API Key
+                    <span className="text-[10px] px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-500 font-mono border border-emerald-500/20">Client-Side Persistence</span>
+                  </h3>
+                  <p className="text-[11px] text-[var(--text-muted)]">Your API key is sent via secure headers and never stored in server databases.</p>
+                </div>
+              </div>
+              <Lock className="w-4 h-4 text-[var(--text-muted)]" />
+            </div>
+
+            <div className="relative">
+              <input
+                type={showApiKey ? "text" : "password"}
+                required
+                placeholder="Enter your Google Gemini API Key (AIzaSy...)"
+                value={apiKey}
+                onChange={(e) => setApiKey(e.target.value)}
+                className="w-full bg-[var(--input-bg)] border border-[var(--border-color)] rounded-lg pl-3.5 pr-10 py-2.5 text-xs font-mono text-[var(--text-primary)] placeholder-[var(--text-muted)] focus:outline-none focus:border-[var(--border-hover)]"
+              />
+              <button
+                type="button"
+                onClick={() => setShowApiKey(!showApiKey)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)] hover:text-[var(--text-primary)] p-1 cursor-pointer"
+                title={showApiKey ? "Hide Key" : "Show Key"}
+              >
+                {showApiKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
           
           <div className="bg-[var(--bg-card)] border border-[var(--border-color)] rounded-xl p-6 space-y-5 shadow-sm">
             <div className="flex items-center gap-2.5 pb-4 border-b border-[var(--border-color)]">
@@ -356,8 +406,9 @@ export default function SetupPage({ onInterviewStarted }) {
             </div>
 
           </div>
+        </div>
 
-        </form>
+      </form>
 
       </div>
     </div>

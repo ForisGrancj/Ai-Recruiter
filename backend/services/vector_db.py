@@ -19,10 +19,10 @@ def ensure_collection_exists():
         )
 
 
-def insert_cv_chunk(candidate_id: int, chunk_text: str):
+def insert_cv_chunk(candidate_id: int, chunk_text: str, api_key: str = None):
     """Generates an embedding for a CV chunk and inserts it into Qdrant with candidate ID."""
     ensure_collection_exists()
-    vector = get_text_embedding(chunk_text)
+    vector = get_text_embedding(chunk_text, api_key=api_key)
 
     qdrant.upsert(
         collection_name=COLLECTION_NAME,
@@ -36,12 +36,12 @@ def insert_cv_chunk(candidate_id: int, chunk_text: str):
     )
 
 
-def search_cv_context(candidate_id: int, query_text: str, top_k: int = 2) -> str:
+def search_cv_context(candidate_id: int, query_text: str, top_k: int = 2, api_key: str = None) -> str:
     """Performs semantic search (RAG) exclusively within candidate's own CV chunks."""
     ensure_collection_exists()
 
     try:
-        query_vector = get_text_embedding(query_text)
+        query_vector = get_text_embedding(query_text, api_key=api_key)
         candidate_filter = Filter(
             must=[FieldCondition(key="candidate_id", match=MatchValue(value=candidate_id))]
         )
@@ -60,4 +60,5 @@ def search_cv_context(candidate_id: int, query_text: str, top_k: int = 2) -> str
 
     except Exception as e:
         print(f">>> WARNING: Error during Qdrant search or collection is empty: {e}")
-        return ""
+        return ""
+

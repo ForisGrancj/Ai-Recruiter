@@ -1,10 +1,18 @@
 const API_BASE = '';
 
+function getHeaders(customHeaders = {}) {
+  const headers = { 'Content-Type': 'application/json', ...customHeaders };
+  const userKey = localStorage.getItem('gemini_api_key');
+  if (userKey) {
+    headers['X-Gemini-API-Key'] = userKey;
+  }
+  return headers;
+}
 
 export async function createJob(jobData) {
   const res = await fetch(`${API_BASE}/jobs/`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: getHeaders(),
     body: JSON.stringify(jobData),
   });
   if (!res.ok) throw new Error('Failed to create job');
@@ -12,9 +20,16 @@ export async function createJob(jobData) {
 }
 
 export async function uploadCandidateCV(formData) {
+  const headers = {};
+  const userKey = localStorage.getItem('gemini_api_key');
+  if (userKey) {
+    headers['X-Gemini-API-Key'] = userKey;
+  }
+
   const res = await fetch(`${API_BASE}/candidates/upload-cv/`, {
     method: 'POST',
-    body: formData, // FormData containing first_name, last_name, email, cv_file
+    headers,
+    body: formData,
   });
   if (!res.ok) {
     const errorData = await res.json().catch(() => ({}));
@@ -24,7 +39,9 @@ export async function uploadCandidateCV(formData) {
 }
 
 export async function getInterviews() {
-  const res = await fetch(`${API_BASE}/interviews/`);
+  const res = await fetch(`${API_BASE}/interviews/`, {
+    headers: getHeaders(),
+  });
   if (!res.ok) throw new Error('Failed to fetch interviews');
   return res.json();
 }
@@ -32,7 +49,7 @@ export async function getInterviews() {
 export async function startInterviewSession(candidateId, jobPostingId) {
   const res = await fetch(`${API_BASE}/interviews/`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: getHeaders(),
     body: JSON.stringify({
       candidate: candidateId,
       job_posting: jobPostingId,
@@ -48,7 +65,7 @@ export async function startInterviewSession(candidateId, jobPostingId) {
 export async function submitQuestionAnswer(sessionId, answerText) {
   const res = await fetch(`${API_BASE}/interviews/answer/`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: getHeaders(),
     body: JSON.stringify({
       session_id: sessionId,
       answer: answerText,
@@ -64,7 +81,7 @@ export async function submitQuestionAnswer(sessionId, answerText) {
 export async function evaluateInterviewSession(sessionId) {
   const res = await fetch(`${API_BASE}/interviews/evaluate/`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: getHeaders(),
     body: JSON.stringify({ session_id: sessionId }),
   });
   if (!res.ok) {
@@ -73,3 +90,4 @@ export async function evaluateInterviewSession(sessionId) {
   }
   return res.json();
 }
+
