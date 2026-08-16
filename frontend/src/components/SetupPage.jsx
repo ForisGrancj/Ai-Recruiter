@@ -352,10 +352,19 @@ export default function SetupPage({ onInterviewStarted }) {
                 <input
                   type="file"
                   accept=".pdf,.docx"
-                  onChange={(e) => setCvFile(e.target.files[0] || null)}
-                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                  onChange={(e) => {
+                    const file = e.target.files[0];
+                    if (file) {
+                      if (file.size > 10 * 1024 * 1024) {
+                        setErrorMsg("Selected file size exceeds 10MB. Please choose a smaller PDF or DOCX file.");
+                        return;
+                      }
+                      setCvFile(file);
+                    }
+                  }}
+                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
                 />
-                <div className="flex flex-col items-center justify-center space-y-2">
+                <div className="flex flex-col items-center justify-center space-y-2 pointer-events-none">
                   <div className="w-9 h-9 rounded-lg bg-[var(--bg-card)] border border-[var(--border-color)] text-[var(--text-primary)] flex items-center justify-center group-hover:scale-105 transition">
                     {cvFile ? <FileText className="w-4 h-4 text-emerald-500" /> : <UploadCloud className="w-4 h-4" />}
                   </div>
@@ -379,6 +388,7 @@ export default function SetupPage({ onInterviewStarted }) {
                 </div>
               </div>
             </div>
+
 
           </div>
 
