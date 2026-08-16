@@ -1,0 +1,37 @@
+# 1. MODEL DEFINITIONS (Model List)
+model_list:
+  # Main LLM Model (For question generation and evaluation)
+  - model_name: interview-llm
+    litellm_params:
+      model: gemini/gemini-2.5-flash
+      api_key: os.environ/GEMINI_API_KEY
+
+  # Backup LLM Model (Fallback Anthropic Claude)
+  - model_name: interview-llm-fallback
+    litellm_params:
+      model: anthropic/claude-3-5-sonnet-20240620
+      api_key: os.environ/ANTHROPIC_API_KEY
+
+  # Main Embedding Model (For converting CV text to vectors)
+  - model_name: cv-embedder
+    litellm_params:
+      model: gemini/gemini-embedding-001
+      api_key: os.environ/GEMINI_API_KEY
+
+# 2. FALLBACK ROUTING RULES
+router_settings:
+  fallbacks:
+    - {"interview-llm": ["interview-llm-fallback"]}
+  num_retries: 3
+  timeout: 10
+
+# 3. SECURITY AND AUTHORIZATION (Master Key)
+general_settings:
+  master_key: sk-1234-lite-llm-secret-key
+
+# 4. REDIS CACHING SETTINGS
+litellm_settings:
+  cache: True
+  cache_type: "redis"
+  redis_url: "redis://redis:6379/0"
+  cache_ttl: 86400

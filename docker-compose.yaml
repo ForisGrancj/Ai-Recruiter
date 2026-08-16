@@ -1,0 +1,108 @@
+services:
+  # 1. PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: postgres
+    environment:
+      POSTGRES_DB: ai_recuirment
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: 159357
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  # 2. Redis (Celery Broker & LiteLLM Caching)
+  redis:
+    image: redis:7-alpine
+    container_name: redis
+    ports:
+      - "6379:6379"
+
+  # 3. Qdrant Vector Database
+  qdrant:
+    image: qdrant/qdrant:latest
+    container_name: qdrant
+    ports:
+      - "6333:6333"
+    volumes:
+      - qdrant_data:/qdrant/storage
+
+  # 4. LiteLLM Proxy Server
+  litellm-proxy:
+    image: ghcr.io/berriai/litellm:main-latest
+    container_name: litellm
+    ports:
+        - "4000:4000"
+    volumes:
+        - ./litellm_config.yaml:/app/config.yaml
+    environment:
+        - OPENAI_API_KEY=${OPENAI_API_KEY}
+        - REDIS_URL=redis://redis:6379/0
+    command: [ "--config", "/app/config.yaml", "--port", "4000" ]
+    depends_on:
+        - redis
+
+  # 5. Django Backend API
+  web:
+    build: .
+    container_name: backend
+    command: sh -c "python manage.py migrate && python manage.py runserver 0.0.0.0:8000"
+    env_file:
+      - .env
+    volumes:
+      - .:/app
+    ports:
+      - "8000:8000"
+    environment:
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY}
+      - POSTGRES_HOST=postgres
+      - DATABASE_URL=postgres://postgres:159357@postgres:5432/ai_recuirment
+      - REDIS_URL=redis://redis:6379/0
+      - LITELLM_PROXY_URL=http://litellm-proxy:4000
+      - QDRANT_URL=http://qdrant:6333
+    depends_on:
+      - postgres
+      - redis
+      - qdrant
+      - litellm-proxy
+
+  # 6. Celery Worker (Background CV Indexing Tasks)
+  celery_worker:
+    build: .
+    container_name: celery
+    command: celery -A core worker -l info
+    env_file:
+      - .env
+    volumes:
+      - .:/app
+    environment:
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY}
+      - DATABASE_URL=postgres://postgres:159357@postgres:5432/ai_recuirment
+      - REDIS_URL=redis://redis:6379/0
+      - LITELLM_PROXY_URL=http://litellm-proxy:4000
+      - QDRANT_URL=http://qdrant:6333
+    depends_on:
+      - redis
+      - postgres
+      - web
+
+  # 7. React Frontend UI (Executive Portal)
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: frontend
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    depends_on:
+      - web
+
+volumes:
+  postgres_data:
+  qdrant_data:
