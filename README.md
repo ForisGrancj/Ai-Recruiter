@@ -9,35 +9,15 @@
 The system is designed following modern microservice and modular monolith principles.
 
 ```mermaid
-flowchart TB
-    subgraph ClientLayer["Frontend Layer"]
-        UI["React SPA Portal (SetupPage and ChatInterviewPage)"]
-    end
-
-    subgraph APILayer["Backend Layer"]
-        API["Django REST API"]
-        TaskEngine["Celery Worker (Asynchronous Tasks)"]
-    end
-
-    subgraph StorageLayer["Storage Layer"]
-        PG["PostgreSQL - Relational DB"]
-        Qdrant["Qdrant Vector DB - Vector Search / RAG"]
-        Redis["Redis - Task Queue and Cache"]
-    end
-
-    subgraph AILayer["Artificial Intelligence Layer"]
-        LiteLLM["LiteLLM Proxy Gateway"]
-        Gemini["Google Gemini 2.5 Flash and Embedding Models"]
-    end
-
-    UI -->|HTTP REST / JSON| API
-    API -->|Model Persistence and Sessions| PG
-    API -->|CV Processing Task| TaskEngine
-    TaskEngine -->|Broker and Result Store| Redis
-    TaskEngine -->|PDF Parsing and Chunk Embedding| Gemini
-    TaskEngine -->|Vector Storage 768d| Qdrant
-    API -->|CV Vector Query Cosine Sim| Qdrant
-    API -->|Prompts and Dynamic AI Response| Gemini
+graph TD
+    Client["Frontend Portal (React + Vite)"] -->|REST API| API["Backend API (Django)"]
+    API -->|Persistence| PG["PostgreSQL Database"]
+    API -->|Async Tasks| Celery["Celery Worker"]
+    Celery -->|Task Queue| Redis["Redis Queue"]
+    Celery -->|Embedding Request| Gemini["Google Gemini AI"]
+    Celery -->|Store Vectors| Qdrant["Qdrant Vector DB"]
+    API -->|CV Search| Qdrant
+    API -->|Dynamic Prompts| Gemini
 ```
 
 ### Layer Components:
@@ -56,28 +36,18 @@ When a candidate uploads a CV, the system executes the following asynchronous wo
 
 ```mermaid
 sequenceDiagram
-    autonumber
-    participant Candidate as Candidate / Client
+    participant User as Candidate
     participant API as Django API
     participant Celery as Celery Worker
-    participant Qdrant as Qdrant Vector DB
-    participant Gemini as Gemini AI API
+    participant Qdrant as Qdrant DB
+    participant Gemini as Gemini AI
 
-    Candidate->>API: POST /candidates/upload-cv/
-    API->>API: Create CandidateProfile record
-    API->>Celery: process_and_index_cv.delay(candidate_id)
-    API-->>Candidate: 201 Created
-    
-    activate Celery
-    Celery->>Celery: Text Extraction via PyPDF
-    Celery->>Celery: RecursiveCharacterTextSplitter
-    loop For Each Text Chunk
-        Celery->>Gemini: get_text_embedding(chunk_text)
-        Gemini-->>Celery: 768D Vector Array
-        Celery->>Qdrant: insert_cv_chunk(candidate_id, vector, payload)
-    end
-    Celery->>API: Mark candidate.is_indexed = True
-    deactivate Celery
+    User->>API: Upload CV (PDF)
+    API->>Celery: Dispatch indexing task
+    API-->>User: Upload successful
+    Celery->>Celery: Extract and split text
+    Celery->>Gemini: Generate embeddings
+    Celery->>Qdrant: Store vector chunks
 ```
 
 ---
@@ -86,19 +56,14 @@ sequenceDiagram
 Aura Interview Engine dynamically adjusts questioning strategy based on candidate responses and CV context:
 
 ```mermaid
-flowchart TD
-    Start["Start Interview Session"] --> Step1["Extract Candidate CV Context - Qdrant RAG"]
-    Step1 --> Step2["Generate Initial Personalized Question - Gemini 2.5 Flash"]
-    Step2 --> Step3["Receive Candidate Answer"]
-    Step3 --> CheckConclude{"Candidate requested termination?"}
-    
-    CheckConclude -- Yes --> ConcludeSession["Conclude Session and Trigger Evaluation"]
-    CheckConclude -- No --> Step4["Multi-Dimensional Questioning Matrix"]
-    
-    Step4 --> Step5["Review Conversation Transcript History"]
-    Step5 --> Step6["Generate Dynamic Follow-up Question"]
-    Step6 --> Step3
-    ConcludeSession --> End["Generate Scorecard Report"]
+graph TD
+    A["Start Session"] --> B["Fetch CV Context from Qdrant"]
+    B --> C["Generate Opening Question"]
+    C --> D["Receive Candidate Answer"]
+    D --> E{"Is Interview Complete?"}
+    E -->|Yes| F["Generate Evaluation Scorecard"]
+    E -->|No| G["Generate Next Followup Question"]
+    G --> D
 ```
 
 ---
