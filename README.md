@@ -10,34 +10,34 @@ The system is designed following modern microservice and modular monolith princi
 
 ```mermaid
 flowchart TB
-    subgraph ClientLayer["🖥️ Frontend Layer (React + Vite + Tailwind)"]
-        UI["React SPA Portal (SetupPage & ChatInterviewPage)"]
+    subgraph ClientLayer["Frontend Layer"]
+        UI["React SPA Portal (SetupPage and ChatInterviewPage)"]
     end
 
-    subgraph APILayer["⚙️ Backend Layer (Django REST Framework)"]
+    subgraph APILayer["Backend Layer"]
         API["Django REST API"]
         TaskEngine["Celery Worker (Asynchronous Tasks)"]
     end
 
-    subgraph StorageLayer["💾 Storage Layer"]
-        PG[(PostgreSQL - Relational DB)]
-        Qdrant[(Qdrant Vector DB - Vector Search / RAG)]
-        Redis[(Redis - Task Queue & Cache)]
+    subgraph StorageLayer["Storage Layer"]
+        PG["PostgreSQL - Relational DB"]
+        Qdrant["Qdrant Vector DB - Vector Search / RAG"]
+        Redis["Redis - Task Queue and Cache"]
     end
 
-    subgraph AILayer["🧠 Artificial Intelligence Layer"]
+    subgraph AILayer["Artificial Intelligence Layer"]
         LiteLLM["LiteLLM Proxy Gateway"]
-        Gemini["Google Gemini 2.5 Flash & Embedding Models"]
+        Gemini["Google Gemini 2.5 Flash and Embedding Models"]
     end
 
-    UI <-->|HTTP REST / JSON| API
-    API -->|Model Persistence & Sessions| PG
+    UI -->|HTTP REST / JSON| API
+    API -->|Model Persistence and Sessions| PG
     API -->|CV Processing Task| TaskEngine
-    TaskEngine <-->|Broker & Result Store| Redis
-    TaskEngine -->|PDF Parsing & Chunk Embedding| Gemini
-    TaskEngine -->|Vector Storage (768d)| Qdrant
-    API <-->|CV Vector Query (Cosine Sim)| Qdrant
-    API <-->|Prompts & Dynamic AI Response| Gemini
+    TaskEngine -->|Broker and Result Store| Redis
+    TaskEngine -->|PDF Parsing and Chunk Embedding| Gemini
+    TaskEngine -->|Vector Storage 768d| Qdrant
+    API -->|CV Vector Query Cosine Sim| Qdrant
+    API -->|Prompts and Dynamic AI Response| Gemini
 ```
 
 ### Layer Components:
@@ -63,14 +63,14 @@ sequenceDiagram
     participant Qdrant as Qdrant Vector DB
     participant Gemini as Gemini AI API
 
-    Candidate->>API: POST /candidates/upload-cv/ (PDF/DOCX)
+    Candidate->>API: POST /candidates/upload-cv/
     API->>API: Create CandidateProfile record
     API->>Celery: process_and_index_cv.delay(candidate_id)
-    API-->>Candidate: 201 Created (Candidate ID & Message)
+    API-->>Candidate: 201 Created
     
     activate Celery
     Celery->>Celery: Text Extraction via PyPDF
-    Celery->>Celery: RecursiveCharacterTextSplitter (Chunk Size: 400, Overlap: 50)
+    Celery->>Celery: RecursiveCharacterTextSplitter
     loop For Each Text Chunk
         Celery->>Gemini: get_text_embedding(chunk_text)
         Gemini-->>Celery: 768D Vector Array
@@ -87,18 +87,18 @@ Aura Interview Engine dynamically adjusts questioning strategy based on candidat
 
 ```mermaid
 flowchart TD
-    Start([Start Interview Session]) --> Step1[Extract Candidate CV Context - Qdrant RAG]
-    Step1 --> Step2[Generate Initial Personalized Question - Gemini 2.5 Flash]
-    Step2 --> Step3[Receive Candidate Answer]
-    Step3 --> CheckConclude{Candidate requested termination?\ne.g. 'End', 'Stop', 'Bye'}
+    Start["Start Interview Session"] --> Step1["Extract Candidate CV Context - Qdrant RAG"]
+    Step1 --> Step2["Generate Initial Personalized Question - Gemini 2.5 Flash"]
+    Step2 --> Step3["Receive Candidate Answer"]
+    Step3 --> CheckConclude{"Candidate requested termination?"}
     
-    CheckConclude -- Yes --> ConcludeSession[Conclude Session & Trigger Evaluation]
-    CheckConclude -- No --> Step4[Multi-Dimensional Questioning Matrix:\n1. Technical Architecture & Deep-Dive\n2. Behavioral & Conflict Management\n3. CV Claims Cross-Examination]
+    CheckConclude -- Yes --> ConcludeSession["Conclude Session and Trigger Evaluation"]
+    CheckConclude -- No --> Step4["Multi-Dimensional Questioning Matrix"]
     
-    Step4 --> Step5[Review Conversation Transcript History (Avoid Repetition)]
-    Step5 --> Step6[Generate Dynamic Follow-up Question]
+    Step4 --> Step5["Review Conversation Transcript History"]
+    Step5 --> Step6["Generate Dynamic Follow-up Question"]
     Step6 --> Step3
-    ConcludeSession --> End([Generate Scorecard Report])
+    ConcludeSession --> End["Generate Scorecard Report"]
 ```
 
 ---
